@@ -5,6 +5,8 @@ package captainalm.network.oc;
  */
 import java.io.*;
 import java.net.*;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * The Open Computers Network Listener.
@@ -20,6 +22,7 @@ public class OCNetworkListener {
 	private boolean cExists;
 	private Object slockcl = new Object();
 	private InetSocketAddress listeningAddress;
+	private List<String> whitelist;
 
 	public OCNetworkListener(InetSocketAddress addressIn) {
 		lThread = new Thread(new OCNetworkListenerThread(this), "OCNetworkListenerThread");
@@ -45,6 +48,12 @@ public class OCNetworkListener {
 		if (listening) {
 			lThread.start();
 		}
+		whitelist = new ArrayList<String>();
+	}
+	
+	public OCNetworkListener(InetSocketAddress addressIn, List<String> whitelistIn) {
+		this(addressIn);
+		whitelist.addAll(whitelistIn);
 	}
 
 	public OCNetworkClient getAcceptedClient() {
@@ -68,6 +77,10 @@ public class OCNetworkListener {
 				cExists = false;
 			}
 		}
+	}
+	
+	public List<String> getWhiteList() {
+		return whitelist;
 	}
 
 	public InetSocketAddress getListeningAddress() {
@@ -132,18 +145,43 @@ public class OCNetworkListener {
 				}
 				try {
 					Socket sa = parent.sSock.accept();
-					sa.setReceiveBufferSize(Short.MAX_VALUE);
-					sa.setSendBufferSize(Short.MAX_VALUE);
-					sa.setSoTimeout(5000);
-					parent.acceptedClient = new OCNetworkClient(sa);
-					parent.cWaiting = true;
-					while (parent.cWaiting) {
-						try {
-							Thread.sleep(100);
-						} catch (InterruptedException e) {
-							e.printStackTrace();
-							break;
+					if (shouldAccept(sa)) {
+						sa.setReceiveBufferSize(Short.MAX_VALUE);
+						sa.setSendBufferSize(Short.MAX_VALUE);
+						sa.setSoTimeout(5000);
+						parent.acceptedClient = new OCNetworkClient(sa);
+						parent.cWaiting = true;
+						while (parent.cWaiting) {
+							try {
+								Thread.sleep(100);
+							} catch (InterruptedException e) {
+								e.printStackTrace();
+								break;
+							}
 						}
+					} else {
+						if (!sa.isInputShutdown()) {
+							try {
+								sa.shutdownInput();
+							} catch (IOException e) {
+								e.printStackTrace();
+							}
+						}
+						if (!sa.isOutputShutdown()) {
+							try {
+								sa.shutdownOutput();
+							} catch (IOException e) {
+								e.printStackTrace();
+							}
+						}
+						if (!sa.isClosed()) {
+							try {
+								sa.close();
+							} catch (IOException e) {
+								e.printStackTrace();
+							}
+						}
+						sa = null;
 					}
 				} catch (IOException e) {
 					e.printStackTrace();
@@ -151,5 +189,20 @@ public class OCNetworkListener {
 			}
 		}
 
+		private boolean shouldAccept(Socket si) {
+			if (parent.whitelist.size() > 0) {
+				String addr = ((InetSocketAddress) si.getRemoteSocketAddress()).getAddress().getHostAddress();
+				boolean toret = false;
+				for (int i = 0; i < parent.whitelist.size(); i++) {
+					if (parent.whitelist.get(i).equals(addr)) {
+						toret = true;
+						break;
+					}
+				}
+				return toret;
+			} else {
+				return true;
+			}
+		}
 	}
 }

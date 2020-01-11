@@ -9,6 +9,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Enumeration;
 import java.util.HashMap;
@@ -81,7 +82,12 @@ public class Main {
 				e.printStackTrace();
 			}
 		}
-		OCNetworkListener server = new OCNetworkListener(address);
+		List<String> wl = new ArrayList<String>();
+		if (settings.containsKey("whitelist")) {
+			
+			wl.addAll(Arrays.asList((settings.get("whitelist").split(","))));
+		}
+		OCNetworkListener server = new OCNetworkListener(address, wl);
 		writeLine("[INFO] : Listener Started!");
 		writeLine("[INFO] : Listener 'Address:Port' : " + server.getListeningAddress().getAddress().getHostAddress()
 				+ ":" + server.getListeningAddress().getPort());
@@ -264,9 +270,10 @@ public class Main {
 		writeLine("");
 		writeLine("Usage:");
 		writeLine(
-				"java/javaw -jar OCDH.jar <listening IP Address> <listening Port> [-mode=<MODE>] [-target=<target file path>] [-cache] [-enumeration] [-creation] [-deletion]");
+				"java/javaw -jar OCDH.jar <listening IP Address> <listening Port> [-mode=<MODE>] [-whitelist=<IP Address [Seperated By ,]>] [-target=<target file path>] [-cache] [-enumeration] [-creation] [-deletion]");
 		writeLine("");
 		writeLine("-mode=<MODE> : allows to select a Hosting Mode.");
+		writeLine("-whitelist=<IP Address [Seperated By ,]> : allows an IP Address to connect, if there is no whitelist switch then any IP Address can connect.");
 		writeLine("-target=<target file path> : allows to select a file for hosting (File Host Mode Only).");
 		writeLine("-cache : caches the target file once (File Host Mode Only).");
 		writeLine("-enumeration : allows for file/directory enumeration (File Access Mode Only).");

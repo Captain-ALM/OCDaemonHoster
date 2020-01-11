@@ -197,7 +197,6 @@ public class OCNetworkClient {
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
-			;
 		}
 		connected = false;
 		sock = null;
