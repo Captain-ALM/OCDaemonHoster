@@ -150,6 +150,90 @@ public class OCNetworkClient {
 		}
 		return toret;
 	}
+	
+	public boolean sendSmallNumber(Integer numIn) {
+		if (strmOut != null && numIn > -1 && numIn < 10) {
+			String numStr = numIn.toString();
+			try {
+				strmOut.write(numStr.substring(0, 1).getBytes(StandardCharsets.ISO_8859_1));
+				return true;
+			} catch (IOException e) {
+				e.printStackTrace();
+				connected = false;
+			}
+		}
+		return false;
+	}
+	
+	public boolean sendNumber(Integer numIn) {
+		if (strmOut != null) {
+			String numStr = numIn.toString();
+			try {
+				strmOut.write(numStr.getBytes(StandardCharsets.ISO_8859_1));
+				return true;
+			} catch (IOException e) {
+				e.printStackTrace();
+				connected = false;
+			}
+		}
+		return false;
+	}
+	
+	public Integer receiveSmallNumber() {
+		if (strmIn != null) {
+			try {
+				return Integer.parseInt(new String(new byte[] { (byte) strmIn.read() }, StandardCharsets.ISO_8859_1));
+			} catch (IOException e) {
+				e.printStackTrace();
+				connected = false;
+			}
+		}
+		return 0;
+	}
+	
+	public Integer receiveNumber(Integer lIn) {
+		Integer toret = 0;
+		if (strmIn != null) {
+			try {
+				int len = lIn;
+				byte[] bufferIn = new byte[len];
+				int res = strmIn.read(bufferIn, 0, len);
+				if (res == -1) {
+					connected = false;
+				} else {
+					connected = true;
+				}
+				toret = Integer.parseInt(new String(bufferIn, StandardCharsets.ISO_8859_1));
+			} catch (IOException | NumberFormatException e) {
+				e.printStackTrace();
+				connected = false;
+				toret = 0;
+			}
+		}
+		return toret;
+	}
+	
+	public String receiveData(Integer lIn) {
+		String toret = "";
+		if (strmIn != null) {
+			try {
+				int len = lIn;
+				byte[] bufferIn = new byte[len];
+				int res = strmIn.read(bufferIn, 0, len);
+				if (res == -1) {
+					connected = false;
+				} else {
+					connected = true;
+				}
+				toret = new String(bufferIn, StandardCharsets.ISO_8859_1);
+			} catch (IOException e) {
+				e.printStackTrace();
+				connected = false;
+				toret = "";
+			}
+		}
+		return toret;
+	}
 
 	public void invokeConnectionCheck() {
 		try {

@@ -7,6 +7,7 @@ import java.net.NetworkInterface;
 import java.net.SocketException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -14,6 +15,7 @@ import java.util.Collections;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import captainalm.network.oc.OCNetworkClient;
 import captainalm.network.oc.OCNetworkListener;
@@ -28,7 +30,7 @@ public class Main {
 	public static List<String> addrsv6;
 
 	public static void main(String[] args) {
-		writeLine("Open Computers Daemon Hoster (OCDH) : (C) Captain ALM 2019.");
+		writeLine("Open Computers Daemon Hoster (OCDH) : (C) Captain ALM 2020.");
 		writeLine("License: BSD 2-Clause.");
 		try {
 			addrsv4 = getInterfaceAddresses(Inet4Address.class);
@@ -63,13 +65,6 @@ public class Main {
 
 	public static void hoster() {
 		writeLine("Hosting Mode!");
-		InetSocketAddress address = null;
-		if (ipAddress == null) {
-			address = new InetSocketAddress(port);
-		} else {
-			address = new InetSocketAddress(ipAddress, port);
-		}
-		writeLine("[INFO] : Address Setup!");
 		if (settings.containsKey("target")) {
 			writeLine("[INFO] : Target File : " + settings.get("target"));
 		}
@@ -82,6 +77,22 @@ public class Main {
 				e.printStackTrace();
 			}
 		}
+		serverRuntime();
+	}
+
+	public static void accessor() {
+		writeLine("Accessor Mode!");
+		serverRuntime();
+	}
+	
+	public static void serverRuntime() {
+		InetSocketAddress address = null;
+		if (ipAddress == null) {
+			address = new InetSocketAddress(port);
+		} else {
+			address = new InetSocketAddress(ipAddress, port);
+		}
+		writeLine("[INFO] : Address Setup!");
 		List<String> wl = new ArrayList<String>();
 		if (settings.containsKey("whitelist")) {
 			
@@ -124,10 +135,6 @@ public class Main {
 		}
 		server.close();
 		server = null;
-	}
-
-	public static void accessor() {
-		throw new RuntimeException("Method not Implemented.");
 	}
 
 	public static void handleProtocol(OCNetworkClient clientIn) {
@@ -184,6 +191,157 @@ public class Main {
 			}
 			writeLine("[INFO] : Receiving : Sending Handshake...");
 			clientIn.sendHandshake("1");
+		} else if (prot.equals("3")) {
+			write("[INFO] : Access Mode : ");
+			clientIn.sendHandshake("1");
+			String protam = clientIn.receiveProtocol();
+			if (protam.equals("1") && ! settings.containsKey("writeonly")) {
+				writeLine("Send");
+				writeLine("[INFO] : Sending : Sending Handshake...");
+				clientIn.sendHandshake("1");
+				writeLine("[INFO] : Sending : Receiving Path...");
+				Integer sl = clientIn.receiveSmallNumber();
+				if (sl != 0) {
+					Integer l = clientIn.receiveNumber(sl);
+					if (l != 0) {
+						String nom = clientIn.receiveData(l);
+						writeLine("[INFO] : Reading : " + nom);
+						try {
+							String data = loadFile(nom);
+							writeLine("[INFO] : Sending : Waiting For Handshake...");
+							if (clientIn.receiveHandshake("1")) {
+								writeLine("[INFO] : Sending : " + nom);
+								clientIn.sendSmallNumber(Integer.toString(data.length()).length());
+								clientIn.sendNumber(data.length());
+								clientIn.sendData(data);
+							}
+							writeLine("[INFO] : Sending : Waiting For Handshake...");
+							clientIn.receiveHandshake("1");
+						} catch (IOException e) {
+							e.printStackTrace();
+						}
+					}
+				}
+			} else if (protam.equals("2") && ! settings.containsKey("readonly")) {
+				writeLine("Receive");
+				writeLine("[INFO] : Receiving : Sending Handshake...");
+				clientIn.sendHandshake("1");
+				writeLine("[INFO] : Receiving : Receiving Path...");
+				Integer sl = clientIn.receiveSmallNumber();
+				if (sl != 0) {
+					Integer l = clientIn.receiveNumber(sl);
+					if (l != 0) {
+						String nom = clientIn.receiveData(l);
+						writeLine("[INFO] : Receiving : Sending Handshake...");
+						clientIn.sendHandshake("1");
+						writeLine("[INFO] : Receiving : " + nom);
+						sl = clientIn.receiveSmallNumber();
+						if (sl != 0) {
+							l = clientIn.receiveNumber(sl);
+							if (l != 0) {
+								String data = clientIn.receiveData(l);
+								writeLine("[INFO] : Writing : " + nom);
+								try {
+									saveFile(nom,data);
+									writeLine("[INFO] : Receiving : Sending Handshake...");
+									clientIn.sendHandshake("1");
+								} catch (IOException e) {
+									e.printStackTrace();
+								}
+							}
+						}
+					}
+				}
+			} else if (protam.equals("3") && settings.containsKey("creation")) {
+				writeLine("Creation");
+				writeLine("[INFO] : Creating : Sending Handshake...");
+				clientIn.sendHandshake("1");
+				writeLine("[INFO] : Creating : Receiving Path...");
+				Integer sl = clientIn.receiveSmallNumber();
+				if (sl != 0) {
+					Integer l = clientIn.receiveNumber(sl);
+					if (l != 0) {
+						String nom = clientIn.receiveData(l);
+						writeLine("[INFO] : Creating : " + nom);
+						try {
+							createFile(nom);
+							writeLine("[INFO] : Creating : Sending Handshake...");
+							clientIn.sendHandshake("1");
+						} catch (IOException e) {
+							e.printStackTrace();
+						}
+					}
+				}
+			} else if (protam.equals("4") && settings.containsKey("deletion")) {
+				writeLine("Deletion");
+				writeLine("[INFO] : Deleting : Sending Handshake...");
+				clientIn.sendHandshake("1");
+				writeLine("[INFO] : Deleting : Receiving Path...");
+				Integer sl = clientIn.receiveSmallNumber();
+				if (sl != 0) {
+					Integer l = clientIn.receiveNumber(sl);
+					if (l != 0) {
+						String nom = clientIn.receiveData(l);
+						writeLine("[INFO] : Deleting : " + nom);
+						try {
+							deleteFile(nom);
+							writeLine("[INFO] : Deleting : Sending Handshake...");
+							clientIn.sendHandshake("1");
+						} catch (IOException e) {
+							e.printStackTrace();
+						}
+					}
+				}
+			} else if (protam.equals("5") && settings.containsKey("enumeration")) {
+				writeLine("Enumeration");
+				writeLine("[INFO] : Enumerating : Sending Handshake...");
+				clientIn.sendHandshake("1");
+				writeLine("[INFO] : Enumerating : Receiving Path...");
+				Integer sl = clientIn.receiveSmallNumber();
+				if (sl != 0) {
+					Integer l = clientIn.receiveNumber(sl);
+					if (l != 0) {
+						String nom = clientIn.receiveData(l);
+						writeLine("[INFO] : Enumerating : " + nom);
+						try {
+							String result = "";
+							if (Files.exists(Paths.get(nom))) {
+								if (Files.isDirectory(Paths.get(nom))) {
+									List<Path> enr = Files.walk(Paths.get(nom), 1).collect(Collectors.toList());
+									if (enr.size() > 0) {
+										if (enr.size() == 1) {
+											result = enr.get(0).toString();
+										} else {
+											for (int i=0;i<(enr.size() - 1);i++) {
+												result = result + enr.get(i).toString() + "\r\n";
+											}
+											result = result + enr.get(enr.size() - 1).toString();
+										}
+									}
+									enr.clear();
+									enr = null;
+								} else {
+									result = Long.toString(Files.size(Paths.get(nom)));
+								}
+							}
+							writeLine("[INFO] : Enumerating : Waiting For Handshake...");
+							if (clientIn.receiveHandshake("1")) {
+								writeLine("[INFO] : Enumerating : Sending Enumeration...");
+								clientIn.sendSmallNumber(Integer.toString(result.length()).length());
+								clientIn.sendNumber(result.length());
+								clientIn.sendData(result);
+							}
+							writeLine("[INFO] : Enumerating : Waiting For Handshake...");
+							clientIn.receiveHandshake("1");
+						} catch (IOException e) {
+							e.printStackTrace();
+						}
+					}
+				}
+			} else {
+				writeLine("Unknown");
+				clientIn.sendHandshake("0");
+			}
 		}
 	}
 
@@ -192,7 +350,23 @@ public class Main {
 	}
 
 	public static void saveFile(String target, String contents) throws IOException {
+		Path tp = Paths.get(target).getParent();
+		if (tp != null) {
+			if (! Files.exists(tp)) {Files.createDirectories(tp);}	
+		}
 		Files.write(Paths.get(target), contents.getBytes(StandardCharsets.ISO_8859_1));
+	}
+	
+	public static void createFile(String target) throws IOException {
+		Path tp = Paths.get(target).getParent();
+		if (tp != null) {
+			if (! Files.exists(tp)) {Files.createDirectories(tp);}	
+		}
+		Files.createFile(Paths.get(target));
+	}
+	
+	public static void deleteFile(String target) throws IOException {
+		Files.delete(Paths.get(target));
 	}
 
 	public static void decryptArgs(String[] args) {
@@ -270,15 +444,17 @@ public class Main {
 		writeLine("");
 		writeLine("Usage:");
 		writeLine(
-				"java/javaw -jar OCDH.jar <listening IP Address> <listening Port> [-mode=<MODE>] [-whitelist=<IP Address [Seperated By ,]>] [-target=<target file path>] [-cache] [-enumeration] [-creation] [-deletion]");
+				"java/javaw -jar OCDH.jar <listening IP Address> <listening Port> [-mode=<MODE>] [-whitelist=<IP Address [Seperated By ,]>] [-target=<target file path>] [-cache] [-enumeration] [-creation] [-deletion] [-writeonly] [-readonly]");
 		writeLine("");
 		writeLine("-mode=<MODE> : allows to select a Hosting Mode.");
 		writeLine("-whitelist=<IP Address [Seperated By ,]> : allows an IP Address to connect, if there is no whitelist switch then any IP Address can connect.");
 		writeLine("-target=<target file path> : allows to select a file for hosting (File Host Mode Only).");
 		writeLine("-cache : caches the target file once (File Host Mode Only).");
-		writeLine("-enumeration : allows for file/directory enumeration (File Access Mode Only).");
+		writeLine("-enumeration : allows for file/directory size/enumeration (File Access Mode Only).");
 		writeLine("-creation : allows for file/directory creation (File Access Mode Only).");
 		writeLine("-deletion : allows for file/directory deletion (File Access Mode Only).");
+		writeLine("-readonly : disallows write access for files (File Access Mode Only).");
+		writeLine("-writeonly : disallows read access for files (File Access Mode Only).");
 		writeLine("");
 		writeLine("MODE:");
 		writeLine("H : File Host Mode, Hosts a single file for access.");
