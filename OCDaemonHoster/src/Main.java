@@ -253,7 +253,7 @@ public class Main {
 					}
 				}
 			} else if (protam.equals("3") && settings.containsKey("creation")) {
-				writeLine("Creation");
+				writeLine("File Creation");
 				writeLine("[INFO] : Creating : Sending Handshake...");
 				clientIn.sendHandshake("1");
 				writeLine("[INFO] : Creating : Receiving Path...");
@@ -305,9 +305,11 @@ public class Main {
 						writeLine("[INFO] : Enumerating : " + nom);
 						try {
 							String result = "";
-							if (Files.exists(Paths.get(nom))) {
-								if (Files.isDirectory(Paths.get(nom))) {
-									List<Path> enr = Files.walk(Paths.get(nom), 1).collect(Collectors.toList());
+							Path nomp = Paths.get(nom);
+							if (Files.exists(nomp)) {
+								if (Files.isDirectory(nomp)) {
+									List<Path> enr = Files.walk(nomp, 1).collect(Collectors.toList());
+									enr.remove(nomp);
 									if (enr.size() > 0) {
 										if (enr.size() == 1) {
 											result = enr.get(0).toString();
@@ -333,6 +335,26 @@ public class Main {
 							}
 							writeLine("[INFO] : Enumerating : Waiting For Handshake...");
 							clientIn.receiveHandshake("1");
+						} catch (IOException e) {
+							e.printStackTrace();
+						}
+					}
+				}
+			}else if (protam.equals("6") && settings.containsKey("deletion")) {
+				writeLine("Directory Creation");
+				writeLine("[INFO] : Creating : Sending Handshake...");
+				clientIn.sendHandshake("1");
+				writeLine("[INFO] : Creating : Receiving Path...");
+				Integer sl = clientIn.receiveSmallNumber();
+				if (sl != 0) {
+					Integer l = clientIn.receiveNumber(sl);
+					if (l != 0) {
+						String nom = clientIn.receiveData(l);
+						writeLine("[INFO] : Creating : " + nom);
+						try {
+							if (! Files.exists(Paths.get(nom))) {Files.createDirectories(Paths.get(nom));}	
+							writeLine("[INFO] : Creating : Sending Handshake...");
+							clientIn.sendHandshake("1");
 						} catch (IOException e) {
 							e.printStackTrace();
 						}
