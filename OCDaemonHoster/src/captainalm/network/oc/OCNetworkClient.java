@@ -186,6 +186,8 @@ public class OCNetworkClient {
 			} catch (IOException e) {
 				e.printStackTrace();
 				connected = false;
+			} catch (NumberFormatException e) {
+				e.printStackTrace();
 			}
 		}
 		return 0;
@@ -209,9 +211,12 @@ public class OCNetworkClient {
 					}
 				}
 				toret = Integer.parseInt(new String(bufferIn, StandardCharsets.ISO_8859_1));
-			} catch (IOException | NumberFormatException e) {
+			} catch (IOException e) {
 				e.printStackTrace();
 				connected = false;
+				toret = 0;
+			} catch (NumberFormatException e) {
+				e.printStackTrace();
 				toret = 0;
 			}
 		}
