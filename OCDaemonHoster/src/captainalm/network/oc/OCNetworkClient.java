@@ -197,11 +197,16 @@ public class OCNetworkClient {
 			try {
 				int len = lIn;
 				byte[] bufferIn = new byte[len];
-				int res = strmIn.read(bufferIn, 0, len);
-				if (res == -1) {
-					connected = false;
-				} else {
-					connected = true;
+				int pos = 0;
+				while (pos < len) {
+					int res = strmIn.read(bufferIn, pos, len - pos);
+					if (res == -1) {
+						connected = false;
+						break;
+					} else {
+						pos += res;
+						connected = true;
+					}
 				}
 				toret = Integer.parseInt(new String(bufferIn, StandardCharsets.ISO_8859_1));
 			} catch (IOException | NumberFormatException e) {
@@ -219,11 +224,16 @@ public class OCNetworkClient {
 			try {
 				int len = lIn;
 				byte[] bufferIn = new byte[len];
-				int res = strmIn.read(bufferIn, 0, len);
-				if (res == -1) {
-					connected = false;
-				} else {
-					connected = true;
+				int pos = 0;
+				while (pos < len) {
+					int res = strmIn.read(bufferIn, pos, len - pos);
+					if (res == -1) {
+						connected = false;
+						break;
+					} else {
+						pos += res;
+						connected = true;
+					}
 				}
 				toret = new String(bufferIn, StandardCharsets.ISO_8859_1);
 			} catch (IOException e) {
